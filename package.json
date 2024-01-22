@@ -1,0 +1,29 @@
+{
+  "name": "w0eee-discord-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -noEmit && esbuild --bundle --minify --platform=node --format=esm index.ts --outfile=w0eee-discord-bot",
+    "run": "tsc && node ."
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/W0EEE/discord-bot.git"
+  },
+  "author": "Eric Johnson",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/W0EEE/discord-bot/issues"
+  },
+  "homepage": "https://github.com/W0EEE/discord-bot#readme",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.2",
+    "esbuild": "^0.19.11",
+    "pg": "^8.11.3",
+    "pg-types": "^4.0.1"
+  }
+}
