@@ -69,7 +69,7 @@ export async function execute(interaction, ctx) {
     const [ record ] = result.rows;
     
     if (!record)
-      return await interaction.reply(`No record found for '${raw_call}'.`);
+      return await interaction.reply(`No record found for '${call}'.`);
 
     const built_name = [ record.first_name, record.mi, record.last_name, record.suffix ].filter(e => e && e.length).join(' ');
 
