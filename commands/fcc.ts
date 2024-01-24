@@ -64,7 +64,8 @@ export async function execute(interaction, ctx) {
     grant_date, expired_date, cancellation_date, effective_date, last_action_date,
     entity_type, entity_name, first_name, mi, last_name, suffix,
     street_address, city, state, zip_code, po_box, attention_line, frn, applicant_type_code 
-    from l_HD JOIN l_EN USING(unique_system_identifier) where l_HD.call_sign = $1::text LIMIT 1;`, [call]);
+    from l_HD JOIN l_EN USING(unique_system_identifier) where l_HD.call_sign = $1::text
+    ORDER BY last_action_date DESC LIMIT 1;`, [call]);
 
     const [ record ] = result.rows;
     
