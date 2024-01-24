@@ -75,6 +75,8 @@ export async function execute(interaction, ctx) {
 
     const embed = new EmbedBuilder();
 
+    const zip_code = (record.zip_code && record.zip_code.length > 5) ? `${record.zip_code.slice(0, 5)}-${record.zip_code.slice(5)}` : record.zip_code;
+
     embed.setTitle(`${prettyCall(call)} (${licenseStatus[record.license_status]} ${applicantType[record.applicant_type_code]})`);
     embed.setDescription(
       [
