@@ -84,7 +84,7 @@ export async function execute(interaction, ctx) {
         record.attention_line && `ATTN: ${record.attention_line}`,
         record.po_box,
         record.street_address,
-        `${record.city}, ${record.state} ${record.zip_code}`
+        `${record.city}, ${record.state} ${zip_code}`
       ].filter(s => s && s.length > 0).join('\n')
     );
     embed.setColor({
