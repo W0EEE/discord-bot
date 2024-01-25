@@ -106,7 +106,7 @@ export async function execute(interaction, ctx) {
       'X': 0xff7f00
     }[record.license_status] || 0x7f7f7f);
     embed.setFields([
-      record.trustee_callsign && record.trustee_name && { name: 'Trustee:', value: `${record.trustee_name} (${record.trustee_callsign})` },
+      record.trustee_callsign && record.trustee_name && { name: 'Trustee:', value: `${record.trustee_name} (${record.trustee_callsign.trim()})` },
       record.operator_class && { name: 'Operator class:', value: operatorClass[record.operator_class] || `unknown/${record.operator_class}` },
       record.grant_date && { name: 'Granted:', value: record.grant_date, inline: true },
       record.effective_date && { name: 'Effective:', value: record.effective_date, inline: true },
