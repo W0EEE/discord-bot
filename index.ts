@@ -19,8 +19,15 @@ const context = {
   })
 };
 
+function refresh_bot_status() {
+  client.user.setPresence({ activities: [{ name: '145.450', type: Discord.ActivityType.Listening }], status: 'online' });
+}
+
 client.once(Discord.Events.ClientReady, readyClient => {
   console.log(`Logged in as ${readyClient.user.tag}`);
+
+  setInterval(refresh_bot_status, 60 * 60 * 1000);
+  refresh_bot_status();
 });
 
 client.on(Discord.Events.InteractionCreate, async interaction => {
