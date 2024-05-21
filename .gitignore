@@ -1,6 +1,8 @@
 **/*.js
 out/
 
+w0eee-discord-bot
+
 # Logs
 logs
 *.log
