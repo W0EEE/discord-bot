@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 const licenseStatus = {
   'A': 'Active',
@@ -116,7 +116,13 @@ export async function execute(interaction, ctx) {
     ].filter(e => e));
     embed.setFooter({ text: `FCC Record #${record.unique_system_identifier}`});
 
-    await interaction.reply({ embeds: [ embed ] });
+    const action_row = new ActionRowBuilder<ButtonBuilder>();
+    action_row.addComponents(
+        new ButtonBuilder().setURL(`https://qrz.com/db/${call}`).setLabel("QRZ").setStyle(ButtonStyle.Link),
+        new ButtonBuilder().setURL(`https://wireless2.fcc.gov/UlsApp/UlsSearch/license.jsp?licKey=${record.unique_system_identifier}`).setLabel("ULS").setStyle(ButtonStyle.Link)
+    );
+
+    await interaction.reply({ embeds: [ embed ], components: [] });
   } catch (err) {
     console.error(err);
     await interaction.reply('Sorry, an occurred and the lookup failed.');
