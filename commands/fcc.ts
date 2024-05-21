@@ -122,7 +122,7 @@ export async function execute(interaction, ctx) {
         new ButtonBuilder().setURL(`https://wireless2.fcc.gov/UlsApp/UlsSearch/license.jsp?licKey=${record.unique_system_identifier}`).setLabel("ULS").setStyle(ButtonStyle.Link)
     );
 
-    await interaction.reply({ embeds: [ embed ], components: [] });
+    await interaction.reply({ embeds: [ embed ], components: [action_row] });
   } catch (err) {
     console.error(err);
     await interaction.reply('Sorry, an occurred and the lookup failed.');
