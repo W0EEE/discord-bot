@@ -75,7 +75,7 @@ export async function execute(interaction, ctx) {
     street_address, city, state, zip_code, po_box, attention_line, frn, applicant_type_code,
     operator_class, trustee_callsign, trustee_name
     from l_HD JOIN l_EN USING(unique_system_identifier) JOIN l_AM using(unique_system_identifier)
-    where l_HD.call_sign = $1::text ORDER BY last_action_date LIMIT 1;`, [call]);
+    where l_HD.call_sign = $1::text ORDER BY to_date(last_action_date, 'MM/DD/YYYY') DESC LIMIT 1;`, [call]);
 
     const [ record ] = result.rows;
     
