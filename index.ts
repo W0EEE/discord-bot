@@ -11,8 +11,7 @@ const client = new Discord.Client({
 
 const context = {
   fcculs: new pg.Pool({
-    host: '/var/run/postgresql',
-    database: 'fcculs',
+    connectionString: process.env.PG_URL,
     max: 10,
     idleTimeoutMillis: 30 * 1000,
     connectionTimeoutMillis: 2000
