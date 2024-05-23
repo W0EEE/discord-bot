@@ -1,132 +1,80 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction } from "discord.js";
 
-const licenseStatus = {
-  'A': 'Active',
-  'C': 'Canceled',	
-  'E': 'Expired',
-  'L': 'Pending Legal Status',
-  'P': 'Parent Station Canceled',
-  'T': 'Terminated',
-  'X': 'Term Pending',
-};
-
-const applicantType = {
-  'B': 'Amateur Club',
-  'C': 'Corporation',
-  'D': 'General Partnership',
-  'E': 'Limited Partnership',
-  'F': 'Limited Liability Partnership',
-  'G': 'Governmental Entity',
-  'H': 'Other',
-  'I': 'Individual',
-  'J': 'Joint Venture',
-  'L': 'Limited Liability Company',
-  'M': 'Military Recreation',
-  'O': 'Consortium',
-  'P': 'Partnership',
-  'R': 'RACES',
-  'T': 'Trust',
-  'U': 'Unincorporated Association'
-};
-
-const operatorClass = {
-  'A': 'Advanced',
-  'E': 'Amateur Extra',
-  'G': 'General',
-  'N': 'Novice',
-  'P': 'Technician Plus',
-  'T': 'Technician'
-};
-
-function prettyCall(call) {
-  return call.replace('0', '\u00d8')
-}
+import db from '../db/index.js';
 
 export const name = 'fcc';
+
+function formatDate(d: Date): string {
+    return [
+        d.getFullYear().toString().padStart(4, '0'),
+        (d.getMonth() + 1).toString().padStart(2, '0'),
+        d.getDate().toString().padStart(2, '0')
+    ].join('-');
+}
 
 const cmd = new SlashCommandBuilder();
 
 cmd.setName(name);
 cmd.setDescription('Query the FCC ULS database for amateur-related records.');
-cmd.addSubcommand(subcommand => 
-  subcommand.setName('call')
-  .setDescription('Perform a quick lookup for basic info on a callsign.')
-  .addStringOption(option => 
-    option.setName('callsign').setDescription('The callsign to look up').setRequired(true)
-  )
+cmd.addSubcommand(subcommand =>
+    subcommand.setName('call')
+        .setDescription('Perform a quick lookup for basic info on a callsign.')
+        .addStringOption(option =>
+            option.setName('callsign').setDescription('The callsign to look up').setRequired(true)
+        )
 )
 
 export const json = cmd.toJSON();
 
-/*
-    grant_date, expired_date, cancellation_date, effective_date, last_action_date,
-    entity_type, applicant_type_code 
+async function call(interaction: ChatInputCommandInteraction, ctx) {
+    const callsign = interaction.options.getString('callsign');
+    try {
+        const license = await db.licenseByCallsign(callsign);
 
-*/
+        if (!license)
+            return interaction.reply(`No results found for ${callsign}`);
 
-async function call(interaction, ctx) {
-  const raw_call = interaction.options.getString('callsign').trim();
-  const call = raw_call.toUpperCase();
+        const embed = new EmbedBuilder();
 
-  try {
-    const result = await ctx.fcculs.query(`SELECT unique_system_identifier, license_status,
-    grant_date, expired_date, cancellation_date, effective_date, last_action_date,
-    entity_type, entity_name, first_name, mi, last_name, suffix,
-    street_address, city, state, zip_code, po_box, attention_line, frn, applicant_type_code,
-    operator_class, trustee_callsign, trustee_name
-    from l_HD JOIN l_EN USING(unique_system_identifier) JOIN l_AM using(unique_system_identifier)
-    where l_HD.call_sign = $1::text ORDER BY to_date(last_action_date, 'MM/DD/YYYY') DESC LIMIT 1;`, [call]);
+        embed.setTitle(`${license.callsign} (${license.status} ${license.applicantType})`);
+        embed.setDescription(
+            [
+                license.name,
+                license.attentionLine,
+                license.poBox,
+                license.streetAddress,
+                `${license.city}, ${license.state} ${license.zip}`
+            ].filter(s => s && s.length > 0).join('\n')
+        );
+        embed.setColor({
+            'A': 0x007f00,
+            'C': 0xff0000,
+            'E': 0xff0000,
+            'T': 0xff0000,
+            'X': 0xff7f00
+        }[license.statusCode] || 0x7f7f7f);
+        embed.setFields([
+            license.trusteeCallsign && license.trusteeName && { name: 'Trustee:', value: `${license.trusteeName} (${license.trusteeCallsign.trim()})` },
+            license.operatorClassCode && { name: 'Operator class:', value: license.operatorClass },
+            license.grantDateRaw && { name: 'Granted:', value: formatDate(license.grantDate), inline: true },
+            license.effectiveDateRaw && { name: 'Effective:', value: formatDate(license.effectiveDate), inline: true },
+            license.expireDateRaw && { name: license.expireDate.valueOf() < Date.now() ? 'Expired:' : 'Expires:', value: formatDate(license.expireDate), inline: true },
+            license.cancelDateRaw && { name: 'Canceled:', value: formatDate(license.cancelDate), inline: true },
+            license.lastActionDateRaw && { name: 'Last Action:', value: formatDate(license.lastActionDate), inline: true }
+        ].filter(e => e));
+        embed.setFooter({ text: `FCC Record #${license.id}` });
 
-    const [ record ] = result.rows;
-    
-    if (!record)
-      return interaction.reply(`No record found for '${call}'.`);
+        const action_row = new ActionRowBuilder<ButtonBuilder>();
+        action_row.addComponents(
+            new ButtonBuilder().setURL(`https://qrz.com/db/${license.callsignAscii}`).setLabel("QRZ").setStyle(ButtonStyle.Link),
+            new ButtonBuilder().setURL(`https://wireless2.fcc.gov/UlsApp/UlsSearch/license.jsp?licKey=${license.id}`).setLabel("ULS").setStyle(ButtonStyle.Link)
+        );
 
-    const built_name = [ record.first_name, record.mi, record.last_name, record.suffix ].filter(e => e && e.length).join(' ');
-
-    const embed = new EmbedBuilder();
-
-    const zip_code = (record.zip_code && record.zip_code.trim().length > 5) ? `${record.zip_code.slice(0, 5)}-${record.zip_code.slice(5)}` : record.zip_code;
-
-    embed.setTitle(`${prettyCall(call)} (${licenseStatus[record.license_status]} ${applicantType[record.applicant_type_code]})`);
-    embed.setDescription(
-      [
-        built_name || record.entity_name,
-        record.attention_line && `ATTN: ${record.attention_line}`,
-        record.po_box,
-        record.street_address,
-        `${record.city}, ${record.state} ${zip_code}`
-      ].filter(s => s && s.length > 0).join('\n')
-    );
-    embed.setColor({
-      'A': 0x007f00,
-      'C': 0xff0000,
-      'E': 0xff0000,
-      'T': 0xff0000,
-      'X': 0xff7f00
-    }[record.license_status] || 0x7f7f7f);
-    embed.setFields([
-      record.trustee_callsign && record.trustee_name && { name: 'Trustee:', value: `${record.trustee_name} (${record.trustee_callsign.trim()})` },
-      record.operator_class && { name: 'Operator class:', value: operatorClass[record.operator_class] || `unknown/${record.operator_class}` },
-      record.grant_date && { name: 'Granted:', value: record.grant_date, inline: true },
-      record.effective_date && { name: 'Effective:', value: record.effective_date, inline: true },
-      record.expired_date && { name: new Date(record.expired_date).valueOf() < Date.now() ? 'Expired:' : 'Expires:', value: record.expired_date, inline: true },
-      record.cancellation_date && { name: 'Canceled:', value: record.cancellation_date, inline: true },
-      record.last_action_date && { name: 'Last Action:', value: record.last_action_date, inline: true }
-    ].filter(e => e));
-    embed.setFooter({ text: `FCC Record #${record.unique_system_identifier}`});
-
-    const action_row = new ActionRowBuilder<ButtonBuilder>();
-    action_row.addComponents(
-        new ButtonBuilder().setURL(`https://qrz.com/db/${call}`).setLabel("QRZ").setStyle(ButtonStyle.Link),
-        new ButtonBuilder().setURL(`https://wireless2.fcc.gov/UlsApp/UlsSearch/license.jsp?licKey=${record.unique_system_identifier}`).setLabel("ULS").setStyle(ButtonStyle.Link)
-    );
-
-    await interaction.reply({ embeds: [ embed ], components: [action_row] });
-  } catch (err) {
-    console.error(err);
-    await interaction.reply('Sorry, an occurred and the lookup failed.');
-  }
+        await interaction.reply({ embeds: [embed], components: [action_row] });
+    } catch (err) {
+        console.error(err);
+        await interaction.reply('Sorry, an occurred and the lookup failed.');
+    }
 }
 
 const subcommands = { call };

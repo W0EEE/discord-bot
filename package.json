@@ -25,5 +25,8 @@
     "esbuild": "^0.19.11",
     "pg": "^8.11.3",
     "pg-types": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.6"
   }
 }
