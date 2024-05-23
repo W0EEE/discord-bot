@@ -64,7 +64,7 @@ export const json = cmd.toJSON();
 
 */
 
-export async function execute(interaction, ctx) {
+async function call(interaction, ctx) {
   const raw_call = interaction.options.getString('callsign').trim();
   const call = raw_call.toUpperCase();
 
@@ -129,3 +129,13 @@ export async function execute(interaction, ctx) {
   }
 }
 
+const subcommands = { call };
+
+export async function execute(interaction, ctx) {
+    const subcommand = interaction.options.getSubcommand();
+
+    if (!subcommands[subcommand])
+        return interaction.reply(`No subcommand matches ${subcommand}`);
+
+    return subcommands[subcommand](interaction, ctx);
+}
