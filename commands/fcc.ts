@@ -41,7 +41,7 @@ async function call(interaction: ChatInputCommandInteraction, ctx) {
             [
                 license.name,
                 license.attentionLine,
-                license.poBox,
+                license.poBox ? `P.O. Box ${license.poBox}` : null,
                 license.streetAddress,
                 `${license.city}, ${license.state} ${license.zip}`
             ].filter(s => s && s.length > 0).join('\n')
