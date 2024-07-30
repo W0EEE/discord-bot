@@ -14,7 +14,7 @@ const client = new Discord.Client({
 
 db._setPool(new pg.Pool({
     connectionString: process.env.PG_URL,
-    max: 10,
+    max: 50,
     idleTimeoutMillis: 30 * 1000,
     connectionTimeoutMillis: 2000
 }));

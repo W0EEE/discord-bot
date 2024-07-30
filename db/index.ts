@@ -82,7 +82,7 @@ export async function licenseByCallsign(callsign: string): Promise<AmateurLicens
         get effectiveDate() {
             return new Date(this.effectiveDateRaw);
         },
-        lastActionDateRaw: this.last_action_date,
+        lastActionDateRaw: record.last_action_date,
         get lastActionDate() {
             return new Date(this.lastActionDateRaw);
         },
@@ -90,7 +90,7 @@ export async function licenseByCallsign(callsign: string): Promise<AmateurLicens
         entityType: record.entity_type,
         entityName: record.entity_name,
         firstName: record.first_name,
-        middleInitial: record.middleInitial,
+        middleInitial: record.mi,
         lastName: record.last_name,
         suffix: record.suffix,
         get name() {
@@ -133,10 +133,64 @@ export async function licenseByCallsign(callsign: string): Promise<AmateurLicens
     };
 }
 
+interface IncrementalUpdate {
+    day: string,
+    timestamp: Date
+}
+
+interface DatabaseStatus {
+    name: "Application" | "License"
+    lastFullUpdate: Date
+    incrementalUpdatesApplied: IncrementalUpdate[]
+    realTimeFetchesApplied: number
+    latestRealTimeFetch: Date | null
+}
+
+interface SystemStatus {
+    latency: number,
+    fetchStatus: DatabaseStatus[]
+}
+
+export async function status(): Promise<SystemStatus | null> {
+    // get the cold latency
+    const start_ts = Date.now();
+    await licenseByCallsign('W0EEE');
+    const end_ts = Date.now();
+    const latency = end_ts - start_ts;
+
+    const complete = await _pool.query(`SELECT DISTINCT ON (db_name) * FROM db_updates WHERE update_type = 'COMPLETE' ORDER BY db_name, ts DESC;`);
+
+    const [app_complete, lic_complete] = complete.rows;
+
+    const [app_incremental, lic_incremental] = await Promise.all([
+        _pool.query(`SELECT * FROM db_updates WHERE update_type = 'INCREMENTAL' AND db_name = 'APPLICATION' AND ts > TO_TIMESTAMP($1) ORDER BY ts DESC;`, [app_complete.ts.valueOf()/1000]),
+        _pool.query(`SELECT * FROM db_updates WHERE update_type = 'INCREMENTAL' AND db_name = 'LICENSE' AND ts > TO_TIMESTAMP($1) ORDER BY ts DESC;`, [lic_complete.ts.valueOf()/1000])
+    ]);
+
+    const application_status: DatabaseStatus = {
+        name: "Application",
+        lastFullUpdate: app_complete.ts,
+        incrementalUpdatesApplied: app_incremental.rows.map(r => { return { day: r.incremental_day, timestamp: r.ts }; }),
+        realTimeFetchesApplied: 0,
+        latestRealTimeFetch: null
+    };
+
+    const license_status: DatabaseStatus = {
+        name: "License",
+        lastFullUpdate: lic_complete.ts,
+        incrementalUpdatesApplied: lic_incremental.rows.map(r => { return { day: r.incremental_day, timestamp: r.ts }; }),
+        realTimeFetchesApplied: 0,
+        latestRealTimeFetch: null
+    };
+
+    return { latency, fetchStatus: [application_status, license_status] };
+}
+
 export function _setPool(pool: pg.Pool) {
     _pool = pool;
 }
 
 export default {
-    licenseByCallsign
+    licenseByCallsign,
+    status
 };

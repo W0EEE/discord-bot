@@ -12,6 +12,14 @@ function formatDate(d: Date): string {
     ].join('-');
 }
 
+function formatTime(d: Date): string {
+    return [
+        d.getHours(),
+        d.getMinutes(),
+        d.getSeconds()
+    ].map(c => c.toString().padStart(2, '0')).join(':');
+}
+
 const cmd = new SlashCommandBuilder();
 
 cmd.setName(name);
@@ -22,7 +30,11 @@ cmd.addSubcommand(subcommand =>
         .addStringOption(option =>
             option.setName('callsign').setDescription('The callsign to look up').setRequired(true)
         )
-)
+);
+cmd.addSubcommand(subcommand => 
+    subcommand.setName('status')
+        .setDescription('Get the status of the FCC replica database.')
+);
 
 export const json = cmd.toJSON();
 
@@ -77,7 +89,37 @@ async function call(interaction: ChatInputCommandInteraction, ctx) {
     }
 }
 
-const subcommands = { call };
+async function status(interaction: ChatInputCommandInteraction, ctx) {
+    try {
+        const status = await db.status();
+
+        const embed = new EmbedBuilder();
+
+        embed.setTitle("W\u00d8EEE FCC Replica Status Report");
+
+        for (const record of status.fetchStatus) {
+            const { name } = record;
+
+            const text = [`${formatDate(record.lastFullUpdate)} ${formatTime(record.lastFullUpdate)}: Complete`];
+
+            for (const inc of record.incrementalUpdatesApplied)
+                text.push(`${formatDate(inc.timestamp)} ${formatTime(inc.timestamp)}: Differential (${inc.day})`);
+
+            const value = text.join('\n');
+
+            embed.addFields({ name, value });
+        }
+
+        embed.setFooter({ text: `${status.latency}ms W0EEEBot ${process.env['W0EEEBOT_VERSION']} OK :)` });
+
+        await interaction.reply({ embeds: [embed] });
+    } catch (err) {
+        console.error(err);
+        await interaction.reply('Sorry, an occurred.');
+    }
+}
+
+const subcommands = { call, status };
 
 export async function execute(interaction, ctx) {
     const subcommand = interaction.options.getSubcommand();
