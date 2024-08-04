@@ -95,15 +95,17 @@ async function status(interaction: ChatInputCommandInteraction, ctx) {
 
         const embed = new EmbedBuilder();
 
-        embed.setTitle("W\u00d8EEE FCC Replica Status Report");
+        embed.setTitle("W\u00d8EEE FCC Replica Status");
 
         for (const record of status.fetchStatus) {
             const { name } = record;
 
-            const text = [`${formatDate(record.lastFullUpdate)} ${formatTime(record.lastFullUpdate)}: Complete`];
+            const text = [];
 
             for (const inc of record.incrementalUpdatesApplied)
                 text.push(`${formatDate(inc.timestamp)} ${formatTime(inc.timestamp)}: Differential (${inc.day})`);
+
+            text.push(`${formatDate(record.lastFullUpdate)} ${formatTime(record.lastFullUpdate)}: Complete`);
 
             const value = text.join('\n');
 
